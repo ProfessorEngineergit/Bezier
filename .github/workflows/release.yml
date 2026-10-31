@@ -5,7 +5,9 @@ name: Release build
 # tab). Installers are kept as artifacts and published only with `publish`:
 #
 #   beta    in the beta repository (bezier), as a pre-release v1.3.0-beta.1
-#   stable  in the main repository (bezier-app), as the release v1.3.0
+#   stable  in the app repository (bezier-app), as the release v1.3.0, and mirrored to the
+#           releases page of the beta repository (bezier), so the files are not only
+#           reachable through the website
 #
 # The website (website.yml) offers the newest of each.
 
@@ -33,6 +35,11 @@ jobs:
   build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    # id-token and attestations: for the attestation of where the files came from, below.
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -76,24 +83,78 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
+          # libunwind-dev first: on 22.04 libgstreamer1.0-dev depends on it and apt cannot choose
+          # between it and the preinstalled libunwind-14-dev on its own ("held broken packages").
+          sudo apt-get install -y libunwind-dev
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf rpm \
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good gstreamer1.0-libav
 
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      # Checks run on every push in CI; this workflow only builds.
-      - name: Build
-        run: node scripts/release.mjs --skip-checks --version ${{ inputs.version }}
+      # A certificate secret that cannot be imported (not a base64 .p12, wrong password) makes
+      # `tauri build` fail at the very end, after twenty minutes of compiling. Try it first
+      # and build unsigned, with a warning, when it does not import.
+      - name: Check the signing certificate
+        if: runner.os == 'macOS'
         env:
-          VITE_CHANNEL: ${{ inputs.channel == 'alpha' && 'alpha' || '' }}
-          # Signing and notarisation, used only when these secrets are set.
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -z "$APPLE_CERTIFICATE" ]; then echo "SIGNING=no" >> "$GITHUB_ENV"; exit 0; fi
+          keychain="$RUNNER_TEMP/check.keychain"
+          security create-keychain -p check "$keychain"
+          if echo "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12" \
+            && security import "$RUNNER_TEMP/cert.p12" -k "$keychain" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign; then
+            echo "SIGNING=yes" >> "$GITHUB_ENV"
+          else
+            echo "::warning::APPLE_CERTIFICATE does not import (it must be a base64-encoded .p12 and APPLE_CERTIFICATE_PASSWORD its password). Building unsigned."
+            echo "SIGNING=no" >> "$GITHUB_ENV"
+          fi
+          security delete-keychain "$keychain" || true
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+      # The same for Windows: a certificate that does not import must not fail the build at its end.
+      # Imported into the runner's store, Tauri finds it by its thumbprint (scripts/release.mjs).
+      - name: Check the Windows signing certificate
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          if (-not $env:WINDOWS_CERTIFICATE) { Write-Host "No WINDOWS_CERTIFICATE: building unsigned."; exit 0 }
+          $path = Join-Path $env:RUNNER_TEMP 'certificate.pfx'
+          try {
+            [IO.File]::WriteAllBytes($path, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+            $password = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+            $imported = Import-PfxCertificate -FilePath $path -CertStoreLocation Cert:\CurrentUser\My -Password $password -ErrorAction Stop
+            "WINDOWS_CERTIFICATE_THUMBPRINT=$($imported.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          } catch {
+            Write-Host "::warning::WINDOWS_CERTIFICATE does not import (it must be a base64-encoded .pfx and WINDOWS_CERTIFICATE_PASSWORD its password). Building unsigned."
+          } finally {
+            Remove-Item $path -ErrorAction SilentlyContinue
+          }
+
+      # Checks run on every push in CI; this workflow only builds.
+      - name: Build
+        shell: bash
+        # An empty APPLE_CERTIFICATE still counts as set to tauri, which then tries to import
+        # it; so the unused ones are removed from the environment, not left empty.
+        run: |
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            [ -n "${!name}" ] || unset "$name"
+          done
+          node scripts/release.mjs --skip-checks --version ${{ inputs.version }}
+        env:
+          VITE_CHANNEL: ${{ inputs.channel == 'alpha' && 'alpha' || '' }}
+          # Signing and notarisation, used only when these secrets are set and the certificate imports.
+          APPLE_CERTIFICATE: ${{ env.SIGNING == 'yes' && secrets.APPLE_CERTIFICATE || '' }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ env.SIGNING == 'yes' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          APPLE_SIGNING_IDENTITY: ${{ env.SIGNING == 'yes' && secrets.APPLE_SIGNING_IDENTITY || '' }}
+          APPLE_ID: ${{ env.SIGNING == 'yes' && secrets.APPLE_ID || '' }}
+          APPLE_PASSWORD: ${{ env.SIGNING == 'yes' && secrets.APPLE_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ env.SIGNING == 'yes' && secrets.APPLE_TEAM_ID || '' }}
 
       - name: Where the files come from
         shell: bash
@@ -102,6 +163,21 @@ jobs:
             "$(git rev-parse HEAD)" "${{ github.ref }}" "${{ inputs.channel }}" \
             "${{ github.server_url }}" "${{ github.repository }}" "${{ github.run_id }}" "${{ runner.os }}" \
             > "release/${{ inputs.version }}/BUILD-INFO.txt"
+
+      # Says, signed by GitHub, that these files were built by this workflow from this commit; anyone
+      # can check one with `gh attestation verify <file> --repo <owner>/<repository>`. Only in a
+      # public repository: a private one needs a GitHub plan this project does not have.
+      - name: Attest where the files come from
+        if: github.event.repository.private == false
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            release/${{ inputs.version }}/*.exe
+            release/${{ inputs.version }}/*.msi
+            release/${{ inputs.version }}/*.dmg
+            release/${{ inputs.version }}/*.deb
+            release/${{ inputs.version }}/*.rpm
+            release/${{ inputs.version }}/*.AppImage
 
       - uses: actions/upload-artifact@v4
         with:
@@ -120,9 +196,11 @@ jobs:
       # Betas publish only to the beta repository, stable releases only to the main one.
       - name: The right repository for the channel
         run: |
-          case "${{ inputs.publish }}/${{ github.repository }}/${{ inputs.version }}" in
-            beta/ProfessorEngineergit/bezier/*-beta.*) ;;
-            stable/ProfessorEngineergit/bezier-app/*) [[ "${{ inputs.version }}" != *-* ]] ;;
+          # GitHub spells the repository as it is capitalised ("Bezier-app"), so compare in lower case.
+          repo="$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
+          case "${{ inputs.publish }}/$repo/${{ inputs.version }}" in
+            beta/professorengineergit/bezier/*-beta.*) ;;
+            stable/professorengineergit/bezier-app/*) [[ "${{ inputs.version }}" != *-* ]] ;;
             *) echo "A ${{ inputs.publish }} release of ${{ inputs.version }} does not belong in ${{ github.repository }}."; exit 1 ;;
           esac
 
@@ -158,7 +236,23 @@ jobs:
             --generate-notes \
             ${{ inputs.publish == 'beta' && '--prerelease' || '--latest' }}
 
-      # Notify the website (in the main repository) of the new beta. Without the token
+      # The same release and files on the releases page of `bezier`, where the issues and the
+      # source live. Needs RELEASES_MIRROR_TOKEN (fine-grained, Contents: read and write on
+      # bezier); without it the step says so and the release stays in bezier-app only.
+      - name: Mirror to the beta repository
+        if: inputs.publish == 'stable'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_MIRROR_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo "::warning::No RELEASES_MIRROR_TOKEN; v${{ inputs.version }} is only in bezier-app."; exit 0; fi
+          gh release create "v${{ inputs.version }}" release/* \
+            --repo ProfessorEngineergit/bezier \
+            --target beta \
+            --title "Bezier ${{ inputs.version }}" \
+            --notes "Stable release. Same files as in [bezier-app](https://github.com/${{ github.repository }}/releases/tag/v${{ inputs.version }})." \
+            --latest
+
+      # Notify the website (in the app repository) of the new beta. Without the token
       # it picks the beta up on its next scheduled run.
       - name: Tell the website
         if: inputs.publish == 'beta'
