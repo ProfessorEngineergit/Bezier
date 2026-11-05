@@ -81,3 +81,36 @@ test('from the start page the picture plays the film again, and its bar jumps an
   // The test film is a second or two long, so it ends either way.
   await expect(film).toHaveCount(0, { timeout: 15_000 });
 });
+
+test('the start page has the trailer beside the intro, and playing it does not start the introduction', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    if (window !== window.top) return;
+    localStorage.setItem('bezier.film.seen', new Date().toISOString());
+    localStorage.setItem('bezier.film.trailer.url', '/film-test.webm');
+    localStorage.setItem('bezier.preferences', JSON.stringify({ startPage: 'home', nib: 'off' }));
+  });
+  await filmAt(page, '/film-test.webm');
+  const playable = await page.evaluate(
+    () => document.createElement('video').canPlayType('video/webm; codecs="vp8"') !== '',
+  );
+  test.skip(!playable, 'this browser does not play WebM');
+  await expect(page.locator('.library[data-loaded]')).toBeVisible();
+  const intro = page.getByRole('button', { name: 'Play the intro film' });
+  const trailer = page.getByRole('button', { name: 'Play the trailer' });
+  await expect(intro).toBeVisible();
+  await expect(trailer).toBeVisible();
+  // Side by side, the same size.
+  const [a, b] = await Promise.all([intro.boundingBox(), trailer.boundingBox()]);
+  if (a === null || b === null) throw new Error('no tiles');
+  expect(Math.abs(a.width - b.width)).toBeLessThan(2);
+  expect(b.x).toBeGreaterThan(a.x + a.width - 1);
+  await trailer.click();
+  const film = page.getByRole('dialog', { name: 'Trailer' });
+  await expect(film).toBeVisible();
+  await expect(film.getByRole('button', { name: 'Skip' })).toBeEnabled();
+  await film.getByRole('button', { name: 'Skip' }).click();
+  await expect(film).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: 'Introduction film' })).toHaveCount(0);
+});

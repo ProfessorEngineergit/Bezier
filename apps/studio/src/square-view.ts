@@ -1,7 +1,9 @@
 /**
  * The Space key: over the view cube, go to the face, edge or corner under the pointer; otherwise
- * square the view to the face under the pointer and frame it (and hand that face to `onFace`, which
- * starts a sketch on it), or, over empty space, to the side the view is already nearest.
+ * square the view to the face under the pointer and frame it (and hand that face to `starts.onFace`, which
+ * starts a sketch on it), or, over empty space, to the side the view is already nearest. A single
+ * side, from the cube or from the nearest, is also handed to `starts.onSide`, which starts a sketch on
+ * its plane.
  */
 
 import type { StableRef } from '@bezier/core';
@@ -31,22 +33,32 @@ export function nearestSide(matrix: readonly number[]): CubeSide {
   return from.y >= 0 ? 'back' : 'front';
 }
 
+/** What Space starts a sketch on: the face under the pointer, or else the plane of a side. */
+export interface SketchStarts {
+  onFace: (face: StableRef) => void;
+  onSide: (side: CubeSide) => void;
+}
+
 export function squareView(
   viewport: ViewportHandle | null,
   animate: boolean,
-  onFace?: (face: StableRef) => void,
+  starts?: SketchStarts,
 ): void {
   if (viewport === null) return;
   // Over the cube: go to the face, edge or corner under the pointer.
   if (cubeHover.sides !== null) {
     viewport.setViewBetween(cubeHover.sides, animate);
+    const [only] = cubeHover.sides;
+    if (cubeHover.sides.length === 1 && only !== undefined) starts?.onSide(only);
     return;
   }
   const { x, y, over } = pointerOverCanvas;
   const face = over ? viewport.squareAt(x, y, animate) : null;
   if (face !== null) {
-    onFace?.(face);
+    starts?.onFace(face);
     return;
   }
-  viewport.setView(nearestSide(viewport.viewCubeMatrix()), animate);
+  const side = nearestSide(viewport.viewCubeMatrix());
+  viewport.setView(side, animate);
+  starts?.onSide(side);
 }

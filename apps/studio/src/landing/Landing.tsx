@@ -6,7 +6,7 @@
 
 import './landing.css';
 import { ChannelTag, reaches, useChannel } from '@bezier/lessons';
-import { replayFilm } from '../intro/film.js';
+import { type FilmId, replayFilm } from '../intro/film.js';
 import { openExternal } from '../open-external.js';
 import { NEWS, type NewsTarget } from './news.js';
 import { facts, REPOSITORY_URL, useDownloads } from './stats.js';
@@ -16,6 +16,30 @@ export interface LandingGo {
   projects: () => void;
   to: (target: NewsTarget) => void;
 }
+
+/** The films on the start page, side by side: each a frame of the film that plays on a click. */
+const FILMS: readonly {
+  id: FilmId;
+  poster: string;
+  alt: string;
+  aria: string;
+  label: string;
+}[] = [
+  {
+    id: 'intro',
+    poster: '/film/intro-poster.webp',
+    alt: "Nib, Bezier's robot, at his laptop: a frame of the intro film",
+    aria: 'Play the intro film',
+    label: 'Watch the intro · 1:24',
+  },
+  {
+    id: 'trailer',
+    poster: '/film/trailer-poster.webp',
+    alt: 'A metal bracket on a dark floor: a frame of the trailer',
+    aria: 'Play the trailer',
+    label: 'Watch the trailer · 0:58',
+  },
+];
 
 export function Landing({ go, version }: { go: LandingGo; version: string }) {
   const channel = useChannel();
@@ -63,29 +87,27 @@ export function Landing({ go, version }: { go: LandingGo; version: string }) {
           </p>
         </div>
         <div className="landing__stage">
-          <figure className="landing__film">
-            {/* A frame of the film (Nib at his laptop), showing what the button plays. */}
-            <img
-              alt="Nib, Bezier's robot, at his laptop: a frame of the intro film"
-              className="landing__film-poster"
-              src="/film/intro-poster.webp"
-            />
-            {/* The whole picture plays the film full screen, with a working skip. */}
-            <button
-              aria-label="Play the intro film"
-              className="landing__film-play"
-              onClick={replayFilm}
-              type="button"
-            >
-              <span aria-hidden="true" className="landing__film-icon">
-                <svg aria-hidden="true" height="22" viewBox="0 0 24 24" width="22">
-                  <title>Play</title>
-                  <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
-                </svg>
-              </span>
-              <span className="landing__film-label">Watch the intro · 1:24</span>
-            </button>
-          </figure>
+          {FILMS.map((film) => (
+            <figure className="landing__film" key={film.id}>
+              {/* A frame of the film, showing what the button plays. */}
+              <img alt={film.alt} className="landing__film-poster" src={film.poster} />
+              {/* The whole picture plays the film full screen, with a working skip. */}
+              <button
+                aria-label={film.aria}
+                className="landing__film-play"
+                onClick={() => replayFilm(film.id)}
+                type="button"
+              >
+                <span aria-hidden="true" className="landing__film-icon">
+                  <svg aria-hidden="true" height="22" viewBox="0 0 24 24" width="22">
+                    <title>Play</title>
+                    <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
+                  </svg>
+                </span>
+                <span className="landing__film-label">{film.label}</span>
+              </button>
+            </figure>
+          ))}
         </div>
       </section>
 

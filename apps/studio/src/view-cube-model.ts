@@ -71,6 +71,11 @@ function planeForView(view: Face['view']): SketchPlane {
   return 'YZ';
 }
 
+/** The datum plane a view onto `side` squares to, with no lean. */
+export function squaredPlane(side: Face['view']): ViewPlane {
+  return { plane: planeForView(side), lean: SQUARE };
+}
+
 /** Orbit radians per pixel dragged. */
 export const ORBIT_PER_PIXEL = 0.01;
 /** Pixels before a press becomes a drag, so a small wobble still counts as a click. */

@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
 
 /**
- * The intro film is in two encodings (see `src/intro/film.ts`), 20 MB each. A desktop build carries
+ * The films (intro and trailer) are each in two encodings (see `src/intro/film.ts`), 8 to 20 MB each. A desktop build carries
  * only the one its system plays: H.264/AAC inside the app for macOS and Windows, VP9/Opus beside it
  * for Linux (`tauri.linux.conf.json`). Tauri names the system it builds for in TAURI_ENV_PLATFORM;
  * a web build has none and keeps both.
@@ -17,7 +17,10 @@ function oneFilmPerSystem(): Plugin {
       const platform = process.env.TAURI_ENV_PLATFORM;
       if (platform === undefined) return;
       // Linux has its film as a file beside the app (tauri.linux.conf.json), not inside it.
-      const unused = platform === 'linux' ? ['intro.mp4', 'intro.webm'] : ['intro.webm'];
+      const unused =
+        platform === 'linux'
+          ? ['intro.mp4', 'intro.webm', 'trailer.mp4', 'trailer.webm']
+          : ['intro.webm', 'trailer.webm'];
       for (const file of unused)
         rmSync(fileURLToPath(new URL(`dist/film/${file}`, import.meta.url)), { force: true });
     },

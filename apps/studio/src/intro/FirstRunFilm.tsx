@@ -8,6 +8,7 @@ import { isTauri } from '@tauri-apps/api/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FILM_DONE,
+  type FilmId,
   filmSeen,
   filmSources,
   filmUrl,
@@ -75,23 +76,24 @@ function useFilmSource(url: string | undefined, wanted: boolean): string | null 
 }
 
 export function FirstRunFilm() {
-  const [playing, setPlaying] = useState<{ first: boolean } | null>(null);
+  const [playing, setPlaying] = useState<{ first: boolean; id: FilmId } | null>(null);
   const [progress, setProgress] = useState(0);
   const [clock, setClock] = useState({ at: 0, length: 0 });
   const [needsPress, setNeedsPress] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
   const wentFullscreen = useRef(false);
-  const sources = filmSources(filmUrl(), servedFilm());
+  const id = playing?.id ?? 'intro';
+  const sources = filmSources(filmUrl(id), servedFilm(id));
   // Index of the file being tried; an error moves to the next.
   const [attempt, setAttempt] = useState(0);
   const source = useFilmSource(sources[attempt], playing !== null);
 
-  const open = useCallback((first: boolean) => {
-    if (filmUrl() === '') return;
+  const open = useCallback((first: boolean, which: FilmId = 'intro') => {
+    if (filmUrl(which) === '') return;
     setAttempt(0);
     setProgress(0);
     setNeedsPress(false);
-    setPlaying({ first });
+    setPlaying({ first, id: which });
   }, []);
 
   // First launch.
@@ -100,7 +102,7 @@ export function FirstRunFilm() {
   }, [open]);
 
   useEffect(() => {
-    const again = () => open(false);
+    const again = (event: Event) => open(false, (event as CustomEvent<FilmId | undefined>).detail);
     window.addEventListener(REPLAY_EVENT, again);
     return () => window.removeEventListener(REPLAY_EVENT, again);
   }, [open]);
@@ -127,7 +129,8 @@ export function FirstRunFilm() {
       }
       if (finished) {
         if (first) markFilmSeen();
-        window.dispatchEvent(new Event(FILM_DONE));
+        // Only the intro hands over to the introduction.
+        if (playing?.id === 'intro') window.dispatchEvent(new Event(FILM_DONE));
       }
     },
     [playing],
@@ -164,7 +167,12 @@ export function FirstRunFilm() {
 
   if (playing === null) return null;
   return (
-    <div aria-label="Introduction film" aria-modal="true" className="film" role="dialog">
+    <div
+      aria-label={playing.id === 'intro' ? 'Introduction film' : 'Trailer'}
+      aria-modal="true"
+      className="film"
+      role="dialog"
+    >
       {/* biome-ignore lint/a11y/useMediaCaption: the film has no speech; its sound is music */}
       <video
         className="film__video"

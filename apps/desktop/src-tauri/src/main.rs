@@ -117,8 +117,8 @@ fn main() {
     });
 }
 
-/// The intro film's URL on Linux and Windows (`film.rs`). Empty on a Mac, where the page's own
-/// copy plays.
+/// The intro film's URL on Linux and Windows (`film.rs`), which also serves the trailer beside it.
+/// Empty on a Mac, where the page's own copies play.
 #[cfg(any(target_os = "linux", windows))]
 fn film_hint(app: &tauri::App) -> String {
     use tauri::path::BaseDirectory;
@@ -126,6 +126,7 @@ fn film_hint(app: &tauri::App) -> String {
         .resolve("film/intro.webm", BaseDirectory::Resource)
         .ok()
         .filter(|path| path.exists())
+        .and_then(|path| path.parent().map(std::path::Path::to_path_buf))
         .and_then(film::serve)
         .map(|url| format!("window.__bezierFilm = {url:?};"))
         .unwrap_or_default()

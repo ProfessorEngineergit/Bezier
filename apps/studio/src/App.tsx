@@ -534,12 +534,12 @@ export function App() {
     keymap,
     onCombine: (operation) => bodiesRef.current.addCombine(operation),
     onView: (view) => viewportRef.current?.setView(view, settings.animateCamera),
-    // Over a flat face Space also starts a sketch on it, unless one is open already.
+    // Space also starts a sketch unless one is open: on the face under the pointer, else on the side.
     onSquareView: () =>
       squareView(
         viewportRef.current,
         settings.animateCamera,
-        category === 'sketch' ? undefined : (face) => void mode.sketchOn(face),
+        category === 'sketch' ? undefined : mode.spaceStarts,
       ),
     onZoomFit: () => setFitSignal((n) => n + 1),
     onFilterCycle: () => setFilter((current) => nextFilter(current)),

@@ -81,12 +81,17 @@ test('Space over a flat face squares up to it and starts a sketch there', async 
   await expect(page.getByRole('button', { name: 'Finish Sketch', exact: true })).toBeVisible();
 });
 
-test('Space over empty space only squares the view, with no sketch', async ({ page }) => {
+test('Space over empty space squares to the nearest side and starts a sketch on its plane', async ({
+  page,
+}) => {
   await openApp(page);
   await addBox(page);
   const rect = await canvasRect(page);
   await page.mouse.move(rect.x + 40, rect.y + rect.height - 40);
   await page.keyboard.press('Space');
   await expect.poll(() => forwardFace(page)).not.toBe('');
-  await expect(page.getByRole('button', { name: 'Finish Sketch', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Finish Sketch', exact: true })).toBeVisible();
+  // A second Space with a sketch open only squares the view again.
+  await page.keyboard.press('Space');
+  await expect(page.getByRole('button', { name: 'Finish Sketch', exact: true })).toHaveCount(1);
 });

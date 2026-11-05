@@ -19,7 +19,7 @@ import {
   type SketchPlane,
   type StableRef,
 } from '@bezier/core';
-import type { ShownSketch, SketchAreaHit, ViewPlane } from '@bezier/renderer';
+import type { CubeSide, ShownSketch, SketchAreaHit, ViewPlane } from '@bezier/renderer';
 import type { ConstraintSolver } from '@bezier/solver';
 import { type CategoryId, dockingFrom, NO_DOCKING } from '@bezier/ui';
 import {
@@ -37,9 +37,11 @@ import { isPlaceholderSolver } from './placeholder-solver.js';
 import type { Said } from './said.js';
 import type { Session, SessionView } from './session.js';
 import { variantAsTool } from './sketch-variants.js';
+import type { SketchStarts } from './square-view.js';
 import { type ExtrudeParams, extrudeId, type SketchTarget } from './use-geometry.js';
 import { type ActiveSurface, leaningSurface, originSurface, useSketch } from './use-sketch.js';
 import type { ViewportHandle } from './Viewport.js';
+import { squaredPlane } from './view-cube-model.js';
 import { shownSketches, sketchFromFeature } from './visible-sketch.js';
 
 type Run = (change: (session: Session) => Promise<SessionView>) => void;
@@ -253,6 +255,23 @@ export function useSketchMode({
     setEditing(null);
   }, [surface, sketch, view, setCategory]);
 
+  /** Starts a new sketch on the datum plane a squared view faces (Space over nothing). */
+  const sketchOnSide = useCallback(
+    (side: CubeSide) => {
+      const facing = squaredPlane(side);
+      sketch.clear();
+      setEditing(null);
+      setCategory('sketch');
+      setSurface(originSurface(facing.plane, facing.lean));
+    },
+    [sketch, setCategory],
+  );
+
+  const spaceStarts = useMemo<SketchStarts>(
+    () => ({ onFace: (face) => void sketchOn(face), onSide: sketchOnSide }),
+    [sketchOn, sketchOnSide],
+  );
+
   /**
    * Activates a drawing tool from the rail or its key. Without a plane, uses the one the view is
    * squared to, or waits for one to be picked.
@@ -456,6 +475,8 @@ export function useSketchMode({
     editing,
     enter,
     sketchOn,
+    sketchOnSide,
+    spaceStarts,
     edit,
     exit,
     pickTool,

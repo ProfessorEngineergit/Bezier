@@ -239,7 +239,11 @@
   }
 }
 
-/* Nib stands on the film's lower edge, outside its clip. */
+/* Nib stands on the films' lower edge, outside their clip. The two films share the stage. */
 .landing__stage {
   position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
 }

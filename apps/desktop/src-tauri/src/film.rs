@@ -1,5 +1,5 @@
-//! Serves the intro film to the Linux and Windows web views over HTTP on 127.0.0.1, on a port the
-//! system picks. Only that one file is served.
+//! Serves the films (the intro and the trailer) to the Linux and Windows web views over HTTP on
+//! 127.0.0.1, on a port the system picks. Only those files of the film folder are served.
 //!
 //! WebKitGTK plays video through GStreamer: from the app's own pages (no byte ranges) a WebM blob
 //! seeks to its end or never starts, and from `asset://` it does not load at all. Over HTTP with
@@ -12,23 +12,27 @@ use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::thread;
 
-/// Serves `file` at `/intro.webm` and returns its URL, or None if no port is available.
-pub fn serve(file: PathBuf) -> Option<String> {
+/// The files that are served, by the name they have in the URL.
+const FILMS: [&str; 2] = ["intro.webm", "trailer.webm"];
+
+/// Serves the films of `folder` and returns the URL of the intro, or None if no port is available.
+/// The page finds the others beside it.
+pub fn serve(folder: PathBuf) -> Option<String> {
     let listener = TcpListener::bind("127.0.0.1:0").ok()?;
     let port = listener.local_addr().ok()?.port();
     thread::spawn(move || {
         for stream in listener.incoming().flatten() {
-            let file = file.clone();
+            let folder = folder.clone();
             thread::spawn(move || {
                 // The player retries failed connections.
-                let _ = answer(stream, &file);
+                let _ = answer(stream, &folder);
             });
         }
     });
     Some(format!("http://127.0.0.1:{port}/intro.webm"))
 }
 
-fn answer(mut stream: TcpStream, file: &PathBuf) -> std::io::Result<()> {
+fn answer(mut stream: TcpStream, folder: &PathBuf) -> std::io::Result<()> {
     let mut reader = BufReader::new(stream.try_clone()?);
     let mut first = String::new();
     reader.read_line(&mut first)?;
@@ -49,10 +53,16 @@ fn answer(mut stream: TcpStream, file: &PathBuf) -> std::io::Result<()> {
     let mut words = first.split_whitespace();
     let method = words.next().unwrap_or("");
     let path = words.next().unwrap_or("");
-    if (method != "GET" && method != "HEAD") || path != "/intro.webm" {
+    let name = path.strip_prefix('/').unwrap_or("");
+    if (method != "GET" && method != "HEAD") || !FILMS.contains(&name) {
         return stream.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n");
     }
-    let mut source = File::open(file)?;
+    let mut source = match File::open(folder.join(name)) {
+        Ok(source) => source,
+        Err(_) => {
+            return stream.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n");
+        }
+    };
     let size = source.metadata()?.len();
     let (start, end, status) = match range {
         Some((start, end)) if start < size => (
@@ -102,9 +112,12 @@ mod tests {
 
     #[test]
     fn answers_the_film_whole_and_in_ranges_and_nothing_else() {
-        let file = std::env::temp_dir().join(format!("film-test-{}.webm", std::process::id()));
-        std::fs::write(&file, b"0123456789").expect("writes");
-        let url = serve(file.clone()).expect("serves");
+        let folder = std::env::temp_dir().join(format!("film-test-{}", std::process::id()));
+        std::fs::create_dir_all(&folder).expect("makes the folder");
+        std::fs::write(folder.join("intro.webm"), b"0123456789").expect("writes");
+        std::fs::write(folder.join("trailer.webm"), b"abc").expect("writes");
+        std::fs::write(folder.join("other.webm"), b"no").expect("writes");
+        let url = serve(folder.clone()).expect("serves");
 
         let whole = get(&url, "/intro.webm", "");
         assert!(whole.starts_with("HTTP/1.1 200"));
@@ -118,8 +131,10 @@ mod tests {
         let open_ended = get(&url, "/intro.webm", "Range: bytes=7-\r\n");
         assert!(open_ended.ends_with("\r\n\r\n789"));
 
+        assert!(get(&url, "/trailer.webm", "").ends_with("\r\n\r\nabc"));
+        assert!(get(&url, "/other.webm", "").starts_with("HTTP/1.1 404"));
         assert!(get(&url, "/etc/passwd", "").starts_with("HTTP/1.1 404"));
         assert!(get(&url, "/intro.webm", "Range: bytes=50-\r\n").starts_with("HTTP/1.1 416"));
-        let _ = std::fs::remove_file(file);
+        let _ = std::fs::remove_dir_all(folder);
     }
 }

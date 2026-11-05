@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { filmSources } from './film.js';
+import { filmSources, servedFilm } from './film.js';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -34,6 +34,14 @@ describe('which file of the film is tried first', () => {
     expect(filmSources('/film/intro.mp4')).toEqual(['/film/intro.mp4', '/film/intro.webm']);
     as('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Edg/141.0');
     expect(filmSources('/film/intro.mp4')).toEqual(['/film/intro.mp4', '/film/intro.webm']);
+  });
+
+  it('treats the trailer like the intro, in the app beside it', () => {
+    as('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Edg/141.0');
+    expect(filmSources('/film/trailer.mp4')).toEqual(['/film/trailer.mp4', '/film/trailer.webm']);
+    vi.stubGlobal('__bezierFilm', 'http://127.0.0.1:41234/intro.webm');
+    expect(servedFilm('trailer')).toBe('http://127.0.0.1:41234/trailer.webm');
+    expect(servedFilm()).toBe('http://127.0.0.1:41234/intro.webm');
   });
 
   it('plays a film from elsewhere as it is, and none when there is none', () => {
