@@ -2,12 +2,6 @@
   <img src="docs/assets/marketing/voron-section.webp" alt="Bezier with a Voron 3D printer assembly open, cut through by a section view" width="880">
 </p>
 
-
-
-https://github.com/user-attachments/assets/6180a1cb-544f-4922-866b-5cb060a7056a
-
-
-
 <h1 align="center">Bezier</h1>
 
 <p align="center">
@@ -135,3 +129,6 @@ license you like. The name and logo are not part of the license; see
 [`docs/legal/licensing.md`](docs/legal/licensing.md) explains all of this in plain language, and
 [`docs/legal/third-party-licenses.md`](docs/legal/third-party-licenses.md) lists the projects
 Bezier builds on. Thank you to all of them.
+
+https://github.com/user-attachments/assets/6180a1cb-544f-4922-866b-5cb060a7056a
+
