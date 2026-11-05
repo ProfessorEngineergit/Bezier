@@ -2,6 +2,12 @@
   <img src="docs/assets/marketing/voron-section.webp" alt="Bezier with a Voron 3D printer assembly open, cut through by a section view" width="880">
 </p>
 
+
+
+https://github.com/user-attachments/assets/6180a1cb-544f-4922-866b-5cb060a7056a
+
+
+
 <h1 align="center">Bezier</h1>
 
 <p align="center">
