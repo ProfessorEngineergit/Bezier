@@ -2,10 +2,11 @@
   <img src="docs/assets/marketing/voron-section.webp" alt="Bezier with a Voron 3D printer assembly open, cut through by a section view" width="880">
 </p>
 
-<p align="center">
-  <a href="https://github.com/ProfessorEngineergit/Bezier/blob/main/docs/assets/marketing/trailer.mp4"><img src="docs/assets/marketing/trailer-poster.jpg" alt="Watch the Bezier 1.0 trailer, 58 seconds" width="880"></a><br>
-  <sub><a href="https://github.com/ProfessorEngineergit/Bezier/blob/main/docs/assets/marketing/trailer.mp4">Watch the trailer</a> · 58 s</sub>
-</p>
+
+
+https://github.com/user-attachments/assets/48707c6a-c822-4680-bf48-6914f363d16b
+
+
 
 <h1 align="center">Bezier</h1>
 
