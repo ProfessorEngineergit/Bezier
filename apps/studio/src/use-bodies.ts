@@ -570,19 +570,35 @@ export function useBodies({
   );
 
   /**
-   * After a part is made or moved, asks about any body it now touches: join, cut, or keep separate.
+   * After parts are made or moved, asks about any body they now touch: join, cut, or keep separate.
+   * One face per part; an extrude of several areas makes several parts, and all of them are asked
+   * about at once, so Join joins them all.
    */
-  const checkContacts = useCallback(
-    (face: StableRef) => {
+  const checkContactsOf = useCallback(
+    (faces: readonly StableRef[]) => {
+      const [first] = faces;
       // Skipped for assemblies: nearly every part touches another, and checking held the geometry
       // worker for up to 24 s after a move in the Voron.
-      if (bodiesRef.current.length > CONTACT_BODIES) return;
-      void sessionRef.current?.contactsOf(face).then((found) => {
-        setContactFace(face);
+      if (first === undefined || bodiesRef.current.length > CONTACT_BODIES) return;
+      const session = sessionRef.current;
+      if (session === null) return;
+      void Promise.all(faces.map((face) => session.contactsOf(face))).then((each) => {
+        const seen = new Set<string>();
+        const found = each.flat().filter((item) => {
+          const key = `${handleOf(item.subject) ?? ''}>${handleOf(item.body) ?? ''}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setContactFace(first);
         setContacts(found);
       });
     },
     [sessionRef],
+  );
+  const checkContacts = useCallback(
+    (face: StableRef) => checkContactsOf([face]),
+    [checkContactsOf],
   );
 
   /** Applies the answer. */
@@ -591,11 +607,19 @@ export function useBodies({
       const [first] = contacts;
       setContacts([]);
       if (choice === 'keep' || first === undefined) return;
-      const target = contacts
-        .map((item) => handleOf(item.body))
-        .filter((h): h is string => h !== null);
-      const tool = handleOf(first.subject);
-      if (tool === null || target.length === 0) return;
+      const tools = [
+        ...new Set(
+          contacts.map((item) => handleOf(item.subject)).filter((h): h is string => h !== null),
+        ),
+      ];
+      const target = [
+        ...new Set(
+          contacts
+            .map((item) => handleOf(item.body))
+            .filter((h): h is string => h !== null && !tools.includes(h)),
+        ),
+      ];
+      if (tools.length === 0 || target.length === 0) return;
       addTool(
         {
           op: 'addFeature',
@@ -603,7 +627,7 @@ export function useBodies({
           type: 'combine',
           name: choice === 'join' ? 'Join' : 'Cut',
           index: 0,
-          params: { target, tools: [tool], operation: choice, keepTools: false },
+          params: { target, tools, operation: choice, keepTools: false },
         },
         false,
       );
@@ -682,5 +706,6 @@ export function useBodies({
     deleteSelection,
     contactProps: { contacts, face: contactFace, onAnswer: resolveContacts },
     checkContacts,
+    checkContactsOf,
   };
 }

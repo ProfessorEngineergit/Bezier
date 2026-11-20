@@ -159,6 +159,38 @@ test('a part drawn into another asks whether to join, cut, or keep it apart', as
   await expect(page.locator('.items-row__problem')).toHaveCount(0);
 });
 
+test('two parts from one extrude, both drawn into another, all join it', async ({ page }) => {
+  await openApp(page);
+  await fromTop(page);
+  await onTop(page);
+  await rectangle(page, { x0: 0.35, y0: 0.4, x1: 0.5, y1: 0.6 });
+  await finish(page);
+  await extrudeAt(page, 0.4, 0.5, '10');
+  await clickEmpty(page);
+
+  // Two separate areas in one sketch, each reaching into the block.
+  await onTop(page);
+  await rectangle(page, { x0: 0.45, y0: 0.42, x1: 0.62, y1: 0.47 });
+  await rectangle(page, { x0: 0.45, y0: 0.53, x1: 0.62, y1: 0.58 });
+  await finish(page);
+  const rect = await canvasRect(page);
+  await page.mouse.click(rect.x + rect.width * 0.58, rect.y + rect.height * 0.445);
+  await page.keyboard.down('Shift');
+  await page.mouse.click(rect.x + rect.width * 0.58, rect.y + rect.height * 0.555);
+  await page.keyboard.up('Shift');
+  const field = page.getByLabel('Extrude distance', { exact: true });
+  await field.fill('6');
+  await field.press('Enter');
+  await expect(page.locator('html[data-busy]')).toHaveCount(0);
+
+  const prompt = page.getByRole('dialog', { name: 'Bodies meet' });
+  await prompt.getByRole('button', { name: 'Join' }).click();
+  await expect(prompt).toHaveCount(0);
+  await openItems(page);
+  await expect(page.locator('.body-row')).toHaveCount(1);
+  await expect(page.locator('.items-row__problem')).toHaveCount(0);
+});
+
 test('keeping a part apart leaves two bodies and asks nothing more', async ({ page }) => {
   await openApp(page);
   await fromTop(page);

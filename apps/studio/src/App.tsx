@@ -313,7 +313,7 @@ export function App() {
     sessionRef,
     setView,
     setSelectedRefs,
-    checkContacts: bodies.checkContacts,
+    checkContacts: bodies.checkContactsOf,
     say,
     showPart: (part) => viewportRef.current?.showPartPreview(part, part?.replaces),
     onCreated: setSelectedFeature,

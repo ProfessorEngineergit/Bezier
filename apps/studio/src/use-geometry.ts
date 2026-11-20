@@ -62,7 +62,7 @@ interface GeometryDeps {
   setView: (view: SessionView | null) => void;
   setSelectedRefs: (refs: readonly StableRef[]) => void;
   /** Asks about any body a new part touches (`use-bodies.ts`). */
-  checkContacts: (face: StableRef) => void;
+  checkContacts: (faces: readonly StableRef[]) => void;
   say: (msg: string) => void;
   /** Draws one part in place of its solid while dragged; null removes it. */
   showPart: (part: PartPreview | null) => void;
@@ -539,7 +539,7 @@ async function addExtrude(
   report: {
     say: (msg: string) => void;
     setSelectedRefs: (refs: readonly StableRef[]) => void;
-    checkContacts: (face: StableRef) => void;
+    checkContacts: (faces: readonly StableRef[]) => void;
   },
 ): Promise<SessionView> {
   // A sketch on a part adds to or cuts only that part, whatever Result is later set to.
@@ -564,32 +564,33 @@ async function addExtrude(
   const normal = next.sketches.get(sketch)?.basis.normal;
   if (normal !== undefined) {
     const sign = params.direction === 'backward' ? -1 : 1;
-    const cap = capFace(next, id, {
+    const caps = capFaces(next, id, {
       x: normal.x * sign,
       y: normal.y * sign,
       z: normal.z * sign,
     });
-    if (cap !== null) {
+    const [cap] = caps;
+    if (cap !== undefined) {
       report.setSelectedRefs([cap]);
-      // A new part drawn into another is worth asking about.
-      if (params.operation === 'new') report.checkContacts(cap);
+      // New parts drawn into another are worth asking about, every one the extrude made.
+      if (params.operation === 'new') report.checkContacts(caps);
     }
   }
   return next;
 }
 
 /**
- * The face of a new extrude furthest along its direction, which the user drags to change the
- * distance. Found geometrically because face tags are positional (`naming.ts`): `end` is whichever
- * sorted second, not necessarily the cap.
+ * The faces of a new extrude furthest along its direction, the first of which the user drags to
+ * change the distance; an extrude of several areas has one each. Found geometrically because face
+ * tags are positional (`naming.ts`): `end` is whichever sorted second, not necessarily the cap.
  */
-function capFace(
+function capFaces(
   view: SessionView,
   feature: FeatureId,
   direction: { x: number; y: number; z: number },
-): FaceRef | null {
+): FaceRef[] {
   const display = view.display;
-  if (display === null) return null;
+  if (display === null) return [];
   const { positions, indices, triangleFaces } = display.mesh;
   const reach = new Map<number, { sum: number; count: number }>();
   for (let t = 0; t < triangleFaces.length; t++) {
@@ -607,14 +608,18 @@ function capFace(
     }
     reach.set(face, entry);
   }
-  let best: { face: number; along: number } | null = null;
-  for (const [face, entry] of reach) {
-    const along = entry.sum / entry.count;
-    if (best === null || along > best.along) best = { face, along };
-  }
-  const ref = best === null ? null : display.faceRefs[best.face];
-  return ref?.kind === 'face' ? ref : null;
+  const along = [...reach].map(([face, entry]) => ({ face, along: entry.sum / entry.count }));
+  const furthest = Math.max(...along.map((item) => item.along));
+  // Caps of separate areas lie in one plane, up to the mesh's rounding.
+  return along
+    .filter((item) => item.along > furthest - CAP_LEVEL)
+    .sort((a, b) => b.along - a.along)
+    .map((item) => display.faceRefs[item.face])
+    .filter((ref): ref is FaceRef => ref?.kind === 'face');
 }
+
+/** How close, in millimetres, two caps must lie along the extrude to count as one level. */
+const CAP_LEVEL = 1e-3;
 
 /**
  * A 40×20 rectangle extruded 15 mm: a sketch and an extrude, as the document model defines a solid.
