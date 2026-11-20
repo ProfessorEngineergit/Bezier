@@ -1,12 +1,12 @@
 /**
- * The release channel this device follows: stable, beta or alpha (by invitation). Each channel
- * includes the ones before it. The Settings switch applies immediately, without a reload.
+ * The release channel this device follows: stable or beta, and alpha in development builds. Each
+ * channel includes the ones before it. The Settings switch applies immediately, without a reload.
  *
  * Every feature that talks to a third-party server (community store, plugins, shared projects, wiki
  * editing, self-hosted servers) is alpha-only; stable and beta make no server requests. The app
  * starts on stable.
  *
- * Alpha requires a valid invitation (`alpha.ts`); without one, choosing alpha reads as beta.
+ * Alpha opens only in a development build (`alpha.ts`); elsewhere a stored alpha reads as beta.
  */
 
 import { alphaOpen, onAlphaChange } from './alpha.js';

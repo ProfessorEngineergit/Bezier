@@ -1,21 +1,10 @@
 /**
- * Settings → Updates: the release channel and what the other channels add. Switching takes effect
- * without a restart. Alpha requires an invitation code, checked on this device.
+ * Settings → Updates: the release channel and what beta adds. Switching takes effect without a
+ * restart. The server features are in development builds only, where Dev is a third choice.
  */
 
-import {
-  type Channel,
-  ChannelTag,
-  chosenChannel,
-  forgetInvite,
-  inviteFailureText,
-  redeemInvite,
-  setChannel,
-  useChannel,
-  useInvite,
-} from '@bezier/lessons';
+import { alphaOpen, type Channel, ChannelTag, setChannel, useChannel } from '@bezier/lessons';
 import { isTauri } from '@tauri-apps/api/core';
-import { useEffect, useRef, useState } from 'react';
 import { CHANNEL_FEATURES } from './channel-features.js';
 import { openExternal } from './open-external.js';
 import { Group, Row, Segmented, Switch } from './PrefsControls.js';
@@ -26,11 +15,8 @@ const NOTES: Record<Channel, string> = {
   stable: 'Stable is what is finished. The new parts below are not shown.',
   beta: 'Beta is for what is new and still being proved. It may change, and may break.',
   alpha:
-    'Alpha is what has not been used outside the lab, and all of it reaches a server. It may change, and may break.',
+    'Dev is this development build: everything that reaches a server, not in a published Bezier.',
 };
-
-const day = (seconds: number) =>
-  new Date(seconds * 1000).toLocaleDateString(undefined, { dateStyle: 'long' });
 
 const NEWEST: Record<string, string> = {
   idle: 'Not looked yet.',
@@ -151,52 +137,13 @@ export function ChannelSettings({
   onCheck: (value: boolean) => void;
 }) {
   const channel = useChannel();
-  const invite = useInvite();
-  const [asking, setAsking] = useState(false);
-  const [code, setCode] = useState('');
-  const [said, setSaid] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const field = useRef<HTMLInputElement>(null);
-  // Focus the code field as soon as it appears.
-  useEffect(() => {
-    if (asking) field.current?.focus();
-  }, [asking]);
-
-  const choose = (next: Channel) => {
-    if (next === 'alpha' && invite === null) {
-      // Alpha needs a code first, so ask for it instead of switching.
-      setAsking(true);
-      return;
-    }
-    setAsking(false);
-    setSaid(null);
-    setChannel(next);
-  };
-
-  const unlock = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setBusy(true);
-    const result = await redeemInvite(code);
-    setBusy(false);
-    if (!result.ok) {
-      setSaid(inviteFailureText(result.reason));
-      return;
-    }
-    setCode('');
-    setSaid(null);
-    setAsking(false);
-    setChannel('alpha');
-  };
-
-  const remove = () => {
-    // Leaving alpha with the invitation drops to beta, where nothing is lost.
-    const wasAlpha = chosenChannel() === 'alpha';
-    forgetInvite();
-    if (wasAlpha) setChannel('beta');
-  };
-
-  // While asking for a code the switch shows the chosen channel; otherwise the actual one.
-  const shown: Channel = asking ? 'alpha' : channel;
+  // A development build adds Dev, with the features that reach a server.
+  const dev = alphaOpen();
+  const options: [Channel, string][] = [
+    ['stable', 'Stable'],
+    ['beta', 'Beta'],
+  ];
+  if (dev) options.push(['alpha', 'Dev']);
 
   return (
     <>
@@ -208,69 +155,24 @@ export function ChannelSettings({
         <Row label="Channel" note={NOTES[channel]}>
           <Segmented<Channel>
             name="release-channel"
-            onChange={choose}
-            options={[
-              ['stable', 'Stable'],
-              ['beta', 'Beta'],
-              ['alpha', 'Alpha'],
-            ]}
-            value={shown}
+            onChange={setChannel}
+            options={options}
+            value={channel}
           />
         </Row>
-        {invite !== null ? (
-          <Row
-            label="Invitation"
-            note={
-              invite.expires === null
-                ? 'Good for alpha, with no end date.'
-                : `Good for alpha until ${day(invite.expires)}.`
-            }
-          >
-            <button className="prefs-button" onClick={remove} type="button">
-              Remove invitation
-            </button>
-          </Row>
-        ) : (
-          asking && (
-            <Row
-              label="Invitation code"
-              note={
-                said ?? 'Alpha is by invitation. Paste the code you were sent; it starts with BZ-.'
-              }
-            >
-              <form className="community-address" onSubmit={(event) => void unlock(event)}>
-                <input
-                  aria-label="Invitation code"
-                  autoComplete="off"
-                  className="prefs-select collab-field collab-field--wide"
-                  onChange={(event) => setCode(event.target.value)}
-                  placeholder="BZ-…"
-                  ref={field}
-                  spellCheck={false}
-                  value={code}
-                />
-                <button
-                  className="prefs-button"
-                  disabled={busy || code.trim() === ''}
-                  type="submit"
-                >
-                  {busy ? 'Checking…' : 'Unlock'}
-                </button>
-              </form>
+      </Group>
+      {dev && (
+        <Group
+          label="What is in Dev"
+          note="These reach a server, so they are in development builds only, with a Dev mark."
+        >
+          {CHANNEL_FEATURES.map((feature) => (
+            <Row key={feature.id} label={feature.name} note={feature.summary}>
+              <ChannelTag gate={feature.gate} />
             </Row>
-          )
-        )}
-      </Group>
-      <Group
-        label="What is in alpha"
-        note="These are shown on the alpha channel, with an Alpha mark, and nowhere else."
-      >
-        {CHANNEL_FEATURES.map((feature) => (
-          <Row key={feature.id} label={feature.name} note={feature.summary}>
-            <ChannelTag gate={feature.gate} />
-          </Row>
-        ))}
-      </Group>
+          ))}
+        </Group>
+      )}
     </>
   );
 }

@@ -1,6 +1,6 @@
 /** Public entry point: `createLessons` (built from a `LessonHost`) and the components to mount. */
 
-export { forgetInvite, redeemInvite } from '../community/client/alpha.js';
+export { alphaOpen, forgetInvite, redeemInvite } from '../community/client/alpha.js';
 export {
   type Channel,
   chosenChannel,

@@ -21,7 +21,7 @@ describe('stable, beta and alpha', () => {
     expect(settingsMatching(['community'], 'beta')).toEqual([]);
     expect(settingsMatching(['community'], 'alpha').map((s) => s.id)).toEqual(['community']);
     expect(settingsMatching(['channel'], 'stable').map((s) => s.id)).toEqual(['updates']);
-    expect(settingsMatching(['invitation'], 'stable').map((s) => s.id)).toEqual(['updates']);
+    expect(settingsMatching(['beta'], 'stable').map((s) => s.id)).toEqual(['updates']);
   });
 
   it('shows no article about an alpha thing below alpha, and no link that leads to one', () => {

@@ -35,8 +35,8 @@ export const NEWS: readonly NewsItem[] = [
   {
     id: 'channels',
     label: 'New',
-    title: 'Stable, beta and alpha',
-    text: 'What reaches a server waits on the alpha channel, which opens with an invitation. Switch in Settings, Updates; it works at once.',
+    title: 'Stable and beta',
+    text: 'Beta shows what is new and still being proved. Switch in Settings, Updates; it works at once.',
     image: '/help/open-settings-pages.webp',
     go: { kind: 'settings', tab: 'updates' },
   },
@@ -50,7 +50,7 @@ export const NEWS: readonly NewsItem[] = [
   },
   {
     id: 'community',
-    label: 'Alpha',
+    label: 'Dev',
     title: 'Community',
     text: 'Lessons, plugins and a leaderboard from a store you choose.',
     image: '/help/community-lessons.webp',
@@ -59,7 +59,7 @@ export const NEWS: readonly NewsItem[] = [
   },
   {
     id: 'collaboration',
-    label: 'Alpha',
+    label: 'Dev',
     title: 'Work on one model together',
     text: 'Share a project through your own server, end-to-end encrypted, and edit it live.',
     image: '/help/collaboration-live.webp',

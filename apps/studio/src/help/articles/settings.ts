@@ -36,8 +36,8 @@ The pages are listed in groups on the left.
 
 - **Bezier.** [General](doc:settings-general): the workspace projects open in and a few interface switches. [Appearance](doc:settings-appearance): theme, contrast, glass, density, size and motion. [Nib](doc:settings-nib): the robot at the top of the window, and his lessons.
 - **Workspace.** Interaction: mouse and trackpad, see [orbit, pan and zoom](doc:navigate). [Viewport](doc:settings-viewport): how finely curves are drawn, and how the view behaves while it moves. [Shortcuts](doc:settings-shortcuts): the key for every command.
-- **Sharing.** Collaboration and Community, on the alpha channel only. See [collaboration](doc:collaboration) and [community](doc:community).
-- **System.** [Updates](doc:settings-updates): the installed version, and the channel: stable, beta or alpha. [MCP & Automation](doc:settings-mcp): let an assistant such as Claude connect, and see what it did. [Data & Privacy](doc:settings-data): what is stored, and a reset for the settings.
+- **Sharing.** Collaboration and Community, in development builds only. See [collaboration](doc:collaboration) and [community](doc:community).
+- **System.** [Updates](doc:settings-updates): the installed version, and the channel: stable or beta. [MCP & Automation](doc:settings-mcp): let an assistant such as Claude connect, and see what it did. [Data & Privacy](doc:settings-data): what is stored, and a reset for the settings.
 - **Make it better.** [Contribute](doc:settings-contribute): report a problem, suggest something, or read the code.
 
 ## Which page for what
@@ -268,26 +268,21 @@ At the bottom, a list of keys that cannot be changed, such as Enter to finish a 
     title: 'Settings: Updates and the channels',
     area: 'Settings',
     summary:
-      'See which version of Bezier you have, choose between the stable, beta and alpha channels, and enter an invitation code for alpha.',
+      'See which version of Bezier you have, and choose between the stable and beta channels.',
     keywords:
-      'updates update version release channel stable beta alpha invitation invite code unlock upgrade install new version switch',
+      'updates update version release channel stable beta upgrade install new version switch',
     body: `Settings, Updates shows the **Installed version**, and the **Channel** you follow.
 
 ![](image:page)
 
-## Stable, beta and alpha
+## Stable and beta
 
 - **Stable** is what is finished. It is where Bezier starts.
-- **Beta** is for what is new and still being proved, before it is stable. Nothing is held back in it yet.
-- **Alpha** is for what has not been used outside the lab, and everything in it reaches a server: Community (lessons, plugins and the leaderboard of a store), plugins in the editor, writing in the wiki, collaboration, and a server of your own. Each carries an **Alpha** mark, and the sidebar says Alpha under the logo.
+- **Beta** is for what is new and still being proved, before it is stable.
 
-Each channel includes the ones before it. The switch works at once. Nothing is closed or reloaded: the parts that belong to a channel appear in the sidebar and in Settings, or go. What you set up on alpha, a store's address, an account on a server, installed plugins, is kept for the next time.
+The switch works at once. Nothing is closed or reloaded: the parts that belong to beta appear in the sidebar and in Settings, or go.
 
-## The invitation code
-
-Alpha is by invitation. Choose **Alpha**, paste the code you were sent (it starts with BZ-) and press **Unlock**. The code is checked on this device and nothing is sent anywhere. The row then shows when the invitation ends, and **Remove invitation** takes it away again.
-
-A code that has run out or was withdrawn stops opening alpha, and the app comes back up on beta.
+What reaches a server, Community (lessons, plugins and the leaderboard of a store), plugins in the editor, writing in the wiki, collaboration and a server of your own, is not in a published Bezier. It lives in development builds, where it carries a **Dev** mark.
 
 ## Looking for a newer version
 

@@ -38,7 +38,7 @@ Click a card to [watch it](doc:learn-player). Hover over a card to see a short s
 ## Get a lesson
 
 - Drop a **.bezierlesson** file anywhere on the page, or press **Import…**. You can choose several files at once. One file opens in the player when it is in; several are added and the page says so.
-- On the alpha channel, download one from [Community](doc:community). It appears here.
+- In a development build, download one from [Community](doc:community). It appears here.
 - Record your own.
 
 With no lessons the page says "No lessons yet" and offers **Import a lesson…** and **Record one**.
