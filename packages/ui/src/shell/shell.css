@@ -698,6 +698,11 @@
   flex-direction: row-reverse;
 }
 
+/* An open flyout's names are always shown, so they take clicks like the icons beside them. */
+.rail__flyout .rail__label[data-clickable] {
+  pointer-events: auto;
+}
+
 /* An open flyout occupies the parent's label column, so hide those labels. */
 .rail__group:has(.rail__flyout) > .rail__labels {
   visibility: hidden;

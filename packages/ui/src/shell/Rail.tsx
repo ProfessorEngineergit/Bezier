@@ -146,7 +146,12 @@ function Group({ group, side, activeId, onActivate, showLabels }: GroupProps) {
                 </div>
                 <div aria-hidden="true" className="rail__labels">
                   {item.flyout.map((child) => (
-                    <Label item={child} key={child.id} side={side} />
+                    <Label
+                      item={child}
+                      key={child.id}
+                      onActivate={child.disabled === true ? undefined : () => onActivate(child.id)}
+                      side={side}
+                    />
                   ))}
                 </div>
               </Flyout>
@@ -200,7 +205,16 @@ function IconButton({ item, selected, onActivate }: IconProps) {
   );
 }
 
-function Label({ item, side }: { item: RailItem; side: 'left' | 'right' }) {
+function Label({
+  item,
+  side,
+  onActivate,
+}: {
+  item: RailItem;
+  side: 'left' | 'right';
+  /** In an open flyout the name is clicked as often as the icon, so it does the same. */
+  onActivate?: (() => void) | undefined;
+}) {
   const caps =
     item.shortcut === undefined ? null : (
       <span className="rail__caps">
@@ -211,9 +225,13 @@ function Label({ item, side }: { item: RailItem; side: 'left' | 'right' }) {
     );
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: a mouse shortcut beside the icon button, which keyboards and screen readers use
+    // biome-ignore lint/a11y/useKeyWithClickEvents: the icon button beside it takes the keys
     <span
       className="rail__label"
+      data-clickable={onActivate === undefined ? undefined : ''}
       data-disabled={item.disabled === true ? '' : undefined}
+      onClick={onActivate}
       data-two-line={item.detail === undefined ? undefined : ''}
     >
       {/* Keycaps lead on the right rail, so the text stays next to its icon on both sides. */}
