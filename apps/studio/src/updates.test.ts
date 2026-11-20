@@ -15,6 +15,8 @@ describe('the update the updater found', () => {
 
   it('copes with a release that has no notes or date', () => {
     expect(releaseOf({ version: '1.0.0' })).toMatchObject({ notes: '', published: '' });
-    expect(releasePage('1.0.0')).toContain('/tag/v1.0.0');
+    expect(releasePage('1.0.0')).toContain('/Bezier-app/releases/tag/v1.0.0');
+    // A beta's installers are beside the code, not in the app repository.
+    expect(releasePage('1.0.2-beta.1')).toContain('/Bezier/releases/tag/v1.0.2-beta.1');
   });
 });

@@ -9,8 +9,9 @@ export interface Release {
   published: string;
 }
 
+/** Where a version's installers are: stable releases in the app repository, betas beside the code. */
 export const releasePage = (version: string): string =>
-  `https://github.com/ProfessorEngineergit/Bezier-app/releases/tag/v${version}`;
+  `https://github.com/ProfessorEngineergit/${version.includes('-') ? 'Bezier' : 'Bezier-app'}/releases/tag/v${version}`;
 
 /** The update the updater found, as the page needs it. */
 export function releaseOf(update: { version: string; body?: string; date?: string }): Release {

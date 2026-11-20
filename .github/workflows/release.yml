@@ -245,9 +245,9 @@ jobs:
 
       # What the installed apps read to find the new version: for each system the package and its
       # signature. It stops the run when a system lacks one, so a release nobody could update to is
-      # never published. Without a release note file the app shows no "What changed".
+      # never published. Without a release note file the app shows no "What changed". A beta needs
+      # TAURI_SIGNING_PRIVATE_KEY in this repository too, or it has no signed packages.
       - name: The updater's latest.json
-        if: inputs.publish == 'stable'
         run: node scripts/updater-manifest.mjs release "${{ inputs.version }}" "docs/releases/${{ inputs.version }}.md"
 
       - name: Release
@@ -260,6 +260,20 @@ jobs:
             --title "Bezier ${{ inputs.version }}" \
             $( [ -f "docs/releases/${{ inputs.version }}.md" ] && echo "--notes-file docs/releases/${{ inputs.version }}.md" || echo "--generate-notes" ) \
             ${{ inputs.publish == 'beta' && '--prerelease' || '--latest' }}
+
+      # Apps with Beta switched on read `latest.json` from the release `beta-channel` (updates.rs),
+      # which always names the newest beta or stable. Made on the first beta.
+      - name: The beta channel points here
+        if: inputs.publish == 'beta'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          repo="${{ github.repository }}"
+          gh release view beta-channel --repo "$repo" >/dev/null 2>&1 ||
+            gh release create beta-channel --repo "$repo" --target "${{ github.sha }}" --prerelease \
+              --title "Beta channel" \
+              --notes "Where the app looks for updates with Beta switched on. The installers are in the releases themselves."
+          gh release upload beta-channel release/latest.json --repo "$repo" --clobber
 
       # A release made with the workflow's own token does not start the website's `release` trigger
       # (GitHub does not chain workflows that way), but starting a workflow by hand is allowed. So the
@@ -285,6 +299,10 @@ jobs:
             --title "Bezier ${{ inputs.version }}" \
             --notes "Stable release. Same files as in [bezier-app](https://github.com/${{ github.repository }}/releases/tag/v${{ inputs.version }})." \
             --latest
+          # A stable release is newer than the betas before it, so Beta switched on finds it too.
+          if gh release view beta-channel --repo ProfessorEngineergit/bezier >/dev/null 2>&1; then
+            gh release upload beta-channel release/latest.json --repo ProfessorEngineergit/bezier --clobber
+          fi
 
       # Notify the website (in the app repository) of the new beta. Without the token
       # it picks the beta up on its next scheduled run.
