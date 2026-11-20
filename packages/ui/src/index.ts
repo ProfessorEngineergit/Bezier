@@ -11,6 +11,7 @@ export type { PropertyPanelProps } from './PropertyPanel.js';
 export { PropertyPanel } from './PropertyPanel.js';
 export type { Control } from './param-control.js';
 export { controlsFor, formatNumber, valueFromInput } from './param-control.js';
+export { selectOnFocus } from './select-on-focus.js';
 export * from './shell/index.js';
 export { currentAngle, shownDegrees, withAngle } from './sketch-angle.js';
 export type { Rect } from './sketch-builder.js';

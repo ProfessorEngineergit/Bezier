@@ -27,8 +27,10 @@ export function SketchAreaOffer({
   onCommit: (id: FeatureId, sketch: FeatureId, params: ExtrudeParams) => void;
   onPreview: (id: FeatureId, sketch: FeatureId, params: ExtrudeParams) => void;
 }) {
+  /** The distance last previewed: a value typed but not yet committed survives a menu change. */
+  const typed = useRef(offer.params.distance);
   const change = (params: Partial<ExtrudeParams>) => {
-    const next = { ...offer.params, ...params };
+    const next = { ...offer.params, distance: typed.current, ...params };
     onChange({ ...offer, params: next });
     onPreview(offer.id, offer.sketch, next);
   };
@@ -79,6 +81,7 @@ export function SketchAreaOffer({
       distance={offer.params.distance}
       faceRef={null}
       handleRef={handleRef}
+      armed
       onCommit={(distance) => {
         onChange(null);
         onCommit(offer.id, offer.sketch, { ...offer.params, distance });
@@ -93,12 +96,15 @@ export function SketchAreaOffer({
           operation: 'cut',
           extent: 'through',
           direction: 'symmetric',
-          distance: Math.max(offer.params.distance, 1),
+          distance: Math.max(typed.current, 1),
         };
         onChange(null);
         onCommit(offer.id, offer.sketch, through);
       }}
-      onPreview={(distance) => onPreview(offer.id, offer.sketch, { ...offer.params, distance })}
+      onPreview={(distance) => {
+        typed.current = distance;
+        onPreview(offer.id, offer.sketch, { ...offer.params, distance });
+      }}
       operation={offer.params.extent === 'through' ? 'through' : offer.params.operation}
     />
   );

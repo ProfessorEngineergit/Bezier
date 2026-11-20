@@ -15,8 +15,8 @@
 /// <reference lib="dom" />
 
 import type { StableRef } from '@bezier/core';
-import { typedNumber } from '@bezier/ui';
-import { useEffect, useRef, useState } from 'react';
+import { selectOnFocus, typedNumber } from '@bezier/ui';
+import { type FocusEvent, useEffect, useRef, useState } from 'react';
 import { px, setStyle } from './dom-writes.js';
 import { GizmoArrow } from './GizmoArrow.js';
 import { projectDirection, type WorldPoint } from './gizmo-direction.js';
@@ -53,6 +53,11 @@ export interface ExtrudeGizmoProps {
    * (a new body, or a cut through). The distance's sign still picks the side.
    */
   onSenseChange?: (sense: PullSense) => void;
+  /**
+   * A typed digit goes into the distance even when the field has no focus. On for signed pulls and
+   * for the profile offer, which open on purpose; off where the gizmo comes with a selection.
+   */
+  armed?: boolean;
   canCombine: boolean;
   /** The selected face; its centroid is the anchor instead of the content centre. */
   faceRef: StableRef | null;
@@ -97,6 +102,7 @@ export function ExtrudeGizmo({
   showDirection = true,
   signed = false,
   onSenseChange,
+  armed = signed,
   canCombine,
   faceRef,
   anchor,
@@ -121,6 +127,8 @@ export function ExtrudeGizmo({
   const outward = useRef({ x: 0, y: -1 });
   const [optionsOpen, setOptionsOpen] = useState(false);
   const cancelBlur = useRef(false);
+  /** True for the moment of a press inside the gizmo, so the blur it causes does not commit. */
+  const pressedInside = useRef(false);
   /**
    * Add or cut as chosen in the menu, for a pull still at zero. Once there is a distance its sign
    * decides, and this is only the fallback.
@@ -142,11 +150,13 @@ export function ExtrudeGizmo({
   const mmPerPixel = useRef(MM_PER_PIXEL_FALLBACK);
 
   // Arm numeric entry without taking focus on selection, which would swallow Delete, deselect and
-  // tool shortcuts. A first digit or sign focuses the field and replaces the value.
+  // tool shortcuts. A first digit (or sign, for a signed pull) focuses the field and replaces the
+  // value.
   useEffect(() => {
-    if (!signed) return;
+    if (!armed) return;
     const startTyping = (event: KeyboardEvent) => {
-      if (event.ctrlKey || event.metaKey || event.altKey || !/^[0-9.-]$/.test(event.key)) return;
+      const typed = signed ? /^[0-9.-]$/ : /^[0-9.]$/;
+      if (event.ctrlKey || event.metaKey || event.altKey || !typed.test(event.key)) return;
       const target = event.target;
       if (
         target instanceof HTMLElement &&
@@ -168,7 +178,7 @@ export function ExtrudeGizmo({
     };
     window.addEventListener('keydown', startTyping, true);
     return () => window.removeEventListener('keydown', startTyping, true);
-  }, [signed, onPreview]);
+  }, [armed, signed, onPreview]);
 
   // Sync live display when the committed distance changes from outside.
   useEffect(() => {
@@ -187,13 +197,21 @@ export function ExtrudeGizmo({
     onPreview(parsed);
   }
 
-  function commitText(): void {
+  function commitText(event?: FocusEvent<HTMLInputElement>): void {
     if (cancelBlur.current) {
       cancelBlur.current = false;
       return;
     }
+    // Focus moving to the gizmo's own menus is not a commit: the typed value stays, previewed, and
+    // the menu changes the result around it.
+    const next = event?.relatedTarget;
+    if (pressedInside.current || (next instanceof Node && rootRef.current?.contains(next))) return;
     const parsed = typedNumber(text) ?? Number.NaN;
-    if (!Number.isFinite(parsed) || (!signed && parsed <= 0)) {
+    // Zero builds nothing, in either mode.
+    if (!Number.isFinite(parsed) || parsed === 0 || (!signed && parsed < 0)) {
+      setLive(distance);
+      liveRef.current = distance;
+      onPreview(distance);
       setText(trim(distance));
       return;
     }
@@ -315,7 +333,18 @@ export function ExtrudeGizmo({
   }, [onPreview, onCommit, signed]);
 
   return (
-    <div className="extrude-gizmo" ref={rootRef}>
+    <div
+      className="extrude-gizmo"
+      // WebKit gives a clicked button no focus, so the field's blur cannot see where focus went;
+      // a press inside the gizmo is noted for the blur in the same moment.
+      onPointerDownCapture={() => {
+        pressedInside.current = true;
+        window.setTimeout(() => {
+          pressedInside.current = false;
+        }, 0);
+      }}
+      ref={rootRef}
+    >
       <button
         type="button"
         className="gizmo-anchor"
@@ -379,6 +408,8 @@ export function ExtrudeGizmo({
             min={signed ? undefined : 0.01}
             onBlur={commitText}
             onChange={(event) => previewText(event.target.value)}
+            // A click into the field selects what is there, so typing replaces it.
+            {...selectOnFocus}
             onKeyDown={(event) => {
               if (event.key === 'Enter') event.currentTarget.blur();
               if (event.key === 'Escape') {

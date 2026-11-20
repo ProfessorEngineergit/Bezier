@@ -95,3 +95,14 @@ test('the view between top and front sketches on the plane leaning 45° to face 
   await expect(panel).toContainText('XZ plane');
   await expect(panel.getByLabel('Turn')).toHaveValue(/^-?45$/);
 });
+
+test('a click into a plane number selects it, so a typed tilt replaces the 0', async ({ page }) => {
+  await openApp(page);
+  await page.getByRole('button', { name: 'Top', exact: true }).dispatchEvent('click');
+  await railButton(page, 'Sketch').click();
+  const panel = page.getByRole('complementary', { name: 'Sketch plane' });
+  const tilt = panel.getByLabel('Tilt');
+  await tilt.click();
+  await page.keyboard.type('30');
+  await expect(tilt).toHaveValue('30');
+});

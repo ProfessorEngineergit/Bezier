@@ -31,6 +31,7 @@ import {
   valueFromInput,
 } from './param-control.js';
 import { refLabel } from './ref-label.js';
+import { selectOnFocus } from './select-on-focus.js';
 import { typedNumber } from './typed-number.js';
 
 export interface PropertyPanelProps {
@@ -459,6 +460,8 @@ function NumberField({
             inputMode="decimal"
             onBlur={leave}
             onChange={(event) => edit(event.target.value)}
+            // A click selects the value, so typing replaces it.
+            {...selectOnFocus}
             onKeyDown={(event) => {
               if (event.key === 'Enter') commit();
               if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
