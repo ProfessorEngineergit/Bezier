@@ -102,3 +102,56 @@ test('Copy and Paste make a copy of a picked line beside it (audit F-048)', asyn
   await page.keyboard.press('ControlOrMeta+v');
   await expect(lengths(page)).toHaveCount(2);
 });
+
+test('a centre rectangle keeps its centre when a side is typed, and R opens Center again', async ({
+  page,
+}) => {
+  const at = await onPlane(page);
+  await page.getByRole('button', { name: 'Top', exact: true }).dispatchEvent('click');
+  await page.waitForTimeout(700);
+  await railButton(page, 'Rectangle').click();
+  await railButton(page, 'Center').click();
+  await at(0.5, 0.5);
+  await at(0.6, 0.58);
+  // Width and height; the construction diagonal has no field of its own.
+  await expect(lengths(page)).toHaveCount(2);
+  const middle = async () => {
+    const boxes = await lengths(page).evaluateAll((inputs) =>
+      inputs.map((input) => {
+        const box = input.getBoundingClientRect();
+        return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+      }),
+    );
+    // The width field sits on a horizontal side: its x is the rectangle's middle.
+    return boxes.map((box) => box.x);
+  };
+  const before = await middle();
+  const width = lengths(page).first();
+  const old = Number(await width.inputValue());
+  await width.fill(String(Math.round(old * 2)));
+  await width.press('Enter');
+  await expect
+    .poll(async () => Number(await width.inputValue()))
+    .toBeCloseTo(Math.round(old * 2), 0);
+  const after = await middle();
+  expect(Math.abs((after[0] ?? 0) - (before[0] ?? 0))).toBeLessThan(3);
+
+  // Escape drops the tool; R opens the variant used last.
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('r');
+  await expect(railButton(page, 'Center')).toHaveAttribute('data-chosen');
+});
+
+test('Select All in a sketch takes what is drawn, so Delete clears it', async ({ page }) => {
+  const at = await onPlane(page);
+  await railButton(page, 'Rectangle').click();
+  await at(0.4, 0.4);
+  await at(0.6, 0.6);
+  await expect(lengths(page)).toHaveCount(2);
+  // The first Escape drops the tool and keeps the sketch open.
+  await page.keyboard.press('Escape');
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+a' : 'Control+a');
+  await page.keyboard.press('Delete');
+  await expect(lengths(page)).toHaveCount(0);
+  await expect(railButton(page, 'Finish Sketch')).toBeVisible();
+});

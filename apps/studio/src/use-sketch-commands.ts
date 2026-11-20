@@ -1,12 +1,12 @@
 /**
- * Sketch rail commands, outside `App.tsx`: drawing tools and their variants, and Modify. Pressing a
- * drawing command's key again cycles to its next variant; a variant picked from the flyout is used
- * as is.
+ * Sketch rail commands, outside `App.tsx`: drawing tools and their variants, and Modify. A drawing
+ * command's key opens the variant last used (Center after Center), pressing it again cycles to the
+ * next; a variant picked from the flyout is used as is.
  */
 
 import type { PlaneBasis } from '@bezier/core';
 import { mirrorSelection, nextVariant, type Point2D } from '@bezier/ui';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { SketchAction } from './SketchActionBar.js';
 import {
   chosenVariants,
@@ -48,6 +48,9 @@ export function useSketchCommands({
   useSketchClipboard(sketch, hasSurface);
   // Text placement: a click in the sketch while Text is open sets it, as in other CAD tools.
   const [textAt, setTextAt] = useState<Point2D | null>(null);
+  /** The variant each drawing command last used, so its key opens that one again. */
+  const lastVariant = useRef<Record<string, string>>({});
+  const opening = (id: string): string | null => lastVariant.current[id] ?? defaultVariant(id);
 
   /** Runs a sketch rail command; false when the id is not one. */
   const run = (id: string): boolean => {
@@ -90,16 +93,18 @@ export function useSketchCommands({
     setAction(null);
     if (!hasSurface) {
       // Without a plane, queue the tool under the name it will use.
-      const first = defaultVariant(id) ?? id;
+      const first = opening(id) ?? id;
       pickTool(first, first);
       return true;
     }
     const owner = commandOf(id);
     if (owner === id && defaultVariant(id) !== null) {
-      const cycled = nextVariant(id, toolAsVariant(sketch.tool));
-      pickTool(id, cycled ?? defaultVariant(id));
+      const next = nextVariant(id, toolAsVariant(sketch.tool)) ?? opening(id);
+      if (next !== null) lastVariant.current[id] = next;
+      pickTool(id, next);
       return true;
     }
+    if (owner !== null && owner !== id) lastVariant.current[owner] = id;
     // A plain tool pressed again is dropped; a variant from the flyout is selected.
     const next = variantAsTool(id);
     pickTool(id, owner === id && sketch.tool === next ? null : id);

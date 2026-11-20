@@ -190,13 +190,29 @@ describe('centerRectangleAt', () => {
       .filter((primitive) => primitive.kind === 'point')
       .map((point) => [point.x, point.y]);
 
+    // The four corners, then the centre.
     expect(points).toEqual([
       [-5, 5],
       [25, 5],
       [25, 35],
       [-5, 35],
+      [10, 20],
     ]);
     expect(isClosed(sketch)).toBe(true);
+  });
+
+  it('keeps its centre as the midpoint of a construction diagonal', () => {
+    const sketch = centerRectangleAt(emptySketch(), { u: 0, v: 0 }, { u: 20, v: 10 });
+    const diagonals = sketch.primitives.filter(
+      (primitive) => primitive.kind === 'line' && primitive.construction === true,
+    );
+    expect(diagonals).toHaveLength(1);
+    const centre = sketch.primitives.find(
+      (primitive) => primitive.kind === 'point' && primitive.x === 0 && primitive.y === 0,
+    );
+    expect(sketch.constraints).toContainEqual(
+      expect.objectContaining({ kind: 'midpoint', point: centre?.id, line: diagonals[0]?.id }),
+    );
   });
 });
 

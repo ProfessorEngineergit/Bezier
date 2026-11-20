@@ -527,7 +527,7 @@ export function App() {
     onDelete: () => {
       if (bodiesRef.current.deleteSelection(selectedFeature, removeFeature)) deselectAll();
     },
-    onSelectAll: selectAll,
+    onSelectAll: category === 'sketch' ? sketch.selectAll : selectAll,
     onStepHistory: stepHistory,
     onHome: goHomeWhileIdle,
     cancelBuild,

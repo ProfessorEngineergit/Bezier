@@ -381,17 +381,44 @@ export function rectangleAt(
   return { primitives: next.primitives, constraints: [...next.constraints, ...constraints] };
 }
 
-/** A rectangle from its centre and one corner. */
+/**
+ * A rectangle from its centre and one corner. A construction diagonal carries the centre as its
+ * midpoint, so a typed width or height grows both sides and the centre stays where it was drawn.
+ */
 export function centerRectangleAt(
   sketch: Sketch,
   center: Point2D,
   corner: Point2D,
   snap: number = SNAP_DISTANCE,
 ): Sketch {
-  return rectangleAt(
-    sketch,
-    { u: center.u * 2 - corner.u, v: center.v * 2 - corner.v },
-    corner,
-    snap,
-  );
+  const opposite = { u: center.u * 2 - corner.u, v: center.v * 2 - corner.v };
+  const rectangle = rectangleAt(sketch, opposite, corner, snap);
+  if (rectangle === sketch) return sketch;
+  const from = ensurePoint(rectangle, opposite, snap);
+  const to = ensurePoint(from.sketch, corner, snap);
+  const lines = to.sketch.primitives.length;
+  let next = connect(to.sketch, from.id, to.id);
+  const diagonal = next.primitives[lines];
+  if (next.primitives.length === lines || diagonal === undefined) return rectangle;
+  next = {
+    ...next,
+    primitives: next.primitives.map((primitive) =>
+      primitive.id === diagonal.id ? { ...primitive, construction: true } : primitive,
+    ),
+  };
+  const middle = ensurePoint(next, center, snap);
+  next = middle.sketch;
+  const taken = new Set<SketchId>([
+    ...next.primitives.map((primitive) => primitive.id),
+    ...next.constraints.map((constraint) => constraint.id),
+  ]);
+  let index = next.constraints.length;
+  while (taken.has(`c${index}`)) index += 1;
+  return {
+    ...next,
+    constraints: [
+      ...next.constraints,
+      { kind: 'midpoint', id: `c${index}`, point: middle.id, line: diagonal.id },
+    ],
+  };
 }

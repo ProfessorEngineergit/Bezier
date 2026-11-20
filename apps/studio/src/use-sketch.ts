@@ -905,6 +905,11 @@ export function useSketch({
     [resetDraft],
   );
 
+  /** Select All in a sketch: every line and curve drawn, not its bare points. */
+  const selectAll = useCallback(() => {
+    setSelected(draftRef.current.primitives.filter((p) => p.kind !== 'point').map((p) => p.id));
+  }, []);
+
   placePending.current = click;
   const grip = useSketchGrip({
     draftRef,
@@ -920,6 +925,7 @@ export function useSketch({
     setTool,
     draft,
     selected,
+    selectAll,
     pending,
     snap,
     closed: isClosed(draft),

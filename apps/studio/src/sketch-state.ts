@@ -13,6 +13,8 @@ export interface SketchState {
   draft: Sketch;
   /** Primitives selected while no drawing tool is active. */
   selected: readonly SketchId[];
+  /** Selects every line and curve drawn, for Select All. */
+  selectAll: () => void;
   /** The rubber band: where the shape in progress currently extends to. */
   pending: readonly Point2D[];
   /** Snap label for the point under the pointer: Endpoint, Midpoint, Grid. */
