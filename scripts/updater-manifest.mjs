@@ -17,7 +17,9 @@ if (dir === undefined || version === undefined) {
   console.error('usage: node scripts/updater-manifest.mjs <release-dir> <version> [notes.md]');
   process.exit(1);
 }
-const repository = process.env.GITHUB_REPOSITORY ?? 'ProfessorEngineergit/Bezier-app';
+// Where the release is published; a beta built in the app repository goes to bezier.
+const repository =
+  process.env.RELEASE_REPOSITORY ?? process.env.GITHUB_REPOSITORY ?? 'ProfessorEngineergit/Bezier-app';
 const base = `https://github.com/${repository}/releases/download/v${version}`;
 const names = readdirSync(dir);
 
