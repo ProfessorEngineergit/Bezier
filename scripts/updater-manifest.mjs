@@ -19,7 +19,9 @@ if (dir === undefined || version === undefined) {
 }
 // Where the release is published; a beta built in the app repository goes to bezier.
 const repository =
-  process.env.RELEASE_REPOSITORY ?? process.env.GITHUB_REPOSITORY ?? 'ProfessorEngineergit/Bezier-app';
+  process.env.RELEASE_REPOSITORY ??
+  process.env.GITHUB_REPOSITORY ??
+  'ProfessorEngineergit/Bezier-app';
 const base = `https://github.com/${repository}/releases/download/v${version}`;
 const names = readdirSync(dir);
 
