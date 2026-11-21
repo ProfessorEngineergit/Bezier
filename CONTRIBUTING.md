@@ -144,13 +144,12 @@ For anything large, open an issue first so we can talk about it before you build
 
 ### Where a pull request goes
 
-To `main` of this repository. From there a change goes through three channels of the app:
+To `beta` of this repository. From there a change goes through two channels of the app:
 
 | Channel | Who runs it | What it is |
 | --- | --- | --- |
-| **Alpha** | people with an invite code | `main` as it is, including the features still marked alpha |
-| **Beta** | anyone who opts in | the `beta` branch: `main` once it has held up in alpha |
-| **Stable** | everyone | the [app repository](https://github.com/ProfessorEngineergit/bezier-app), built from `beta` once it has held up there; the downloads come from it |
+| **Beta** | anyone who opts in | the `beta` branch, where pull requests land |
+| **Stable** | everyone | `main` of this repository and the [app repository](https://github.com/ProfessorEngineergit/bezier-app): `beta` once it has held up; the downloads come from it |
 
 ### Pull requests
 

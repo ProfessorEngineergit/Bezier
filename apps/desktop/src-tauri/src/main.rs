@@ -20,6 +20,7 @@ mod memory;
 mod menu;
 mod open;
 mod save;
+mod updates;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -36,6 +37,7 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(open::Chosen::default())
+        .manage(updates::Pending::default())
         .invoke_handler(tauri::generate_handler![
             ask::ask_question,
             external::open_external,
@@ -45,7 +47,9 @@ fn main() {
             memory::machine_memory,
             open::open_files,
             open::read_import,
-            save::save_file
+            save::save_file,
+            updates::check_beta_update,
+            updates::install_beta_update
         ])
         .setup(|app| {
             menu::install(app)?;

@@ -76,6 +76,16 @@ function setVersion(version) {
   }
   const conf = JSON.parse(readFileSync(tauriConf, 'utf8'));
   conf.version = version;
+  // The Windows MSI takes only numbers (1.0.2.1), so a beta like 1.0.2-beta.1 names its MSI
+  // version separately; the app and the other installers keep the full version.
+  const pre = /^(\d+)\.(\d+)\.(\d+)-[A-Za-z]+\.(\d+)$/.exec(version);
+  conf.bundle ??= {};
+  conf.bundle.windows ??= {};
+  conf.bundle.windows.wix ??= {};
+  if (pre) conf.bundle.windows.wix.version = pre.slice(1, 5).join('.');
+  else delete conf.bundle.windows.wix.version;
+  if (Object.keys(conf.bundle.windows.wix).length === 0) delete conf.bundle.windows.wix;
+  if (Object.keys(conf.bundle.windows).length === 0) delete conf.bundle.windows;
   writeFileSync(tauriConf, `${JSON.stringify(conf, null, 2)}\n`);
   const cargo = readFileSync(cargoToml, 'utf8').replace(
     /^version = ".*"$/m,

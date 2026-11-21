@@ -10,7 +10,7 @@ export const START = [
       'Read and improve the wiki, and browse lessons and plugins other people share, without an account.',
     keywords:
       'community store lessons plugins docs wiki download install share server extension marketplace leaderboard write article improve address points',
-    body: `Community is part of the alpha channel, which opens with an invitation code: see [Updates](doc:settings-updates). On stable and beta the same page is the wiki alone, see [the wiki](doc:wiki).
+    body: `Community reaches a server, so it is in development builds only, not in a published Bezier: see [Updates](doc:settings-updates). On stable and beta the same page is the wiki alone, see [the wiki](doc:wiki).
 
 Community is the page in the sidebar of the start page, after Learn. It has four parts, chosen at the top: Wiki, Lessons, Plugins and Leaderboard. It opens on the Wiki.
 
@@ -67,7 +67,7 @@ Then:
 2. Type in the search above the list to narrow it, or click an article to read it. Ctrl or Cmd and K finds an article from anywhere, also inside a project. See [search](doc:search).
 3. Press **Collapse** to take the wiki off the page into a window that floats over the app. It stays open when you open a project, so an article can sit beside the model it is about. Drag it by its bar, size it from its corner, and press **Expand** on the start page to put it back.
 
-> Writing and changing articles, and the community's lessons, plugins and leaderboard, are on the alpha channel. See [Updates](doc:settings-updates).`,
+> Writing and changing articles, and the community's lessons, plugins and leaderboard, are in development builds only. See [Updates](doc:settings-updates).`,
     places: ['wiki'],
   }),
 ] as const;

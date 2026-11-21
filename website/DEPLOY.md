@@ -17,13 +17,12 @@ und hochgeladen wird es von GitHub Actions: `.github/workflows/website.yml`.
 | Kanal | Repository und Branch | Tag | Auf der Website |
 | --- | --- | --- | --- |
 | dev | the private development repository · `dev` | keiner | nie (privat, darf rot sein) |
-| alpha | `bezier` · `main` | keiner, Builds mit `channel: alpha` | nur mit Zugangscode |
 | beta | `bezier` · `beta` | `v0.3.0-beta.1`, als Pre-Release | Download → Beta |
-| stable | `bezier-app` · `main` | `v0.3.0`, als Latest | Download → Stable (Standard) |
+| stable | `bezier` · `main` und `bezier-app` · `main` | `v0.3.0`, als Latest | Download → Stable (Standard) |
 
-Eine Version wandert so: `dev` → `pnpm promote:alpha` → `bezier` `main` → `pnpm promote:beta` →
-`bezier` `beta` (Beta-Release) → hält sie, `pnpm promote:stable` → `bezier-app` `main` (stabiles
-Release).
+Eine Version wandert so: `dev` → `pnpm promote:beta` → `bezier` `beta` (Beta-Release) → hält sie,
+`pnpm promote:stable` → `bezier` `main` und `bezier-app` `main` (stabiles Release). Was einen Server
+braucht, steckt nur in Entwicklungs-Builds (`channel: alpha`), nie in einem veröffentlichten.
 
 ## 1. IONOS einmal einrichten
 

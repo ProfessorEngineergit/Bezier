@@ -5,17 +5,17 @@ What Bezier does, which release channel each part is in, and what is being worke
 [`platforms.md`](platforms.md). A feature here means one that is in the app and has been used; where
 something was built but not tried on every system, the table says so.
 
-## The three channels
+## The two channels
 
 | Channel | What it is | Who it is for |
 | --- | --- | --- |
 | **Stable** | What has been on the beta and held up. The default, and what the downloads are | Everyone |
-| **Beta** | The beta repository's `main`: every change has passed `pnpm check` and the browser tests, and the maintainer has used it | People who want changes early and will report what breaks |
-| **Alpha** | Parts that reach beyond the machine (other people's servers, one you run) or that have not been used outside the lab | People who want to try what is not finished |
+| **Beta** | The `beta` branch: every change has passed `pnpm check` and the browser tests, and the maintainer has used it | People who want changes early and will report what breaks |
 
-A part moves from alpha to beta to stable by changing its `gate` in `channel-features.ts` and in the
-places that check the channel. Today **everything below is in all three channels, except the five
-parts listed under Alpha only.**
+Parts that reach beyond the machine (other people's servers, one you run) are in development builds
+only, marked **Dev**, and in no published Bezier. A part moves to beta or stable by changing its
+`gate` in `channel-features.ts` and in the places that check the channel. Today **everything below is
+in both channels, except the five parts listed under Development builds only.**
 
 ## In every channel
 
@@ -57,7 +57,7 @@ ready, a crash loses at most the step being made.
 **Report a problem.** From any screen, with a picture to draw on, what the app logged and details of the
 machine (never about the user), and an offer to send it after a crash.
 
-## Alpha only
+## Development builds only
 
 | Part | What it is |
 | --- | --- |

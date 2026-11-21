@@ -211,13 +211,16 @@ jobs:
       # For docs/releases/<version>.md, the notes of the release.
       - uses: actions/checkout@v5
 
-      # Betas publish only to the beta repository, stable releases only to the main one.
+      # Betas are published in the beta repository, stable releases in the main one. Betas are built
+      # in the app repository, which holds the updater's signing key, from a `beta` branch that is
+      # the same commit as bezier's.
       - name: The right repository for the channel
         run: |
           # GitHub spells the repository as it is capitalised ("Bezier-app"), so compare in lower case.
           repo="$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
           case "${{ inputs.publish }}/$repo/${{ inputs.version }}" in
             beta/professorengineergit/bezier/*-beta.*) ;;
+            beta/professorengineergit/bezier-app/*-beta.*) ;;
             stable/professorengineergit/bezier-app/*) [[ "${{ inputs.version }}" != *-* ]] ;;
             *) echo "A ${{ inputs.publish }} release of ${{ inputs.version }} does not belong in ${{ github.repository }}."; exit 1 ;;
           esac
@@ -245,27 +248,44 @@ jobs:
 
       # What the installed apps read to find the new version: for each system the package and its
       # signature. It stops the run when a system lacks one, so a release nobody could update to is
-      # never published. Without a release note file the app shows no "What changed".
+      # never published. Without a release note file the app shows no "What changed". A beta needs
+      # TAURI_SIGNING_PRIVATE_KEY in this repository too, or it has no signed packages.
       - name: The updater's latest.json
-        if: inputs.publish == 'stable'
+        env:
+          RELEASE_REPOSITORY: ${{ inputs.publish == 'beta' && 'ProfessorEngineergit/Bezier' || github.repository }}
         run: node scripts/updater-manifest.mjs release "${{ inputs.version }}" "docs/releases/${{ inputs.version }}.md"
 
       - name: Release
         env:
-          GH_TOKEN: ${{ github.token }}
+          # A beta built here is published in bezier, which this run's own token cannot write to.
+          GH_TOKEN: ${{ inputs.publish == 'beta' && github.repository != 'ProfessorEngineergit/Bezier' && secrets.RELEASES_MIRROR_TOKEN || github.token }}
         run: |
           gh release create "v${{ inputs.version }}" release/* \
-            --repo "${{ github.repository }}" \
+            --repo "${{ inputs.publish == 'beta' && 'ProfessorEngineergit/Bezier' || github.repository }}" \
             --target "${{ github.sha }}" \
             --title "Bezier ${{ inputs.version }}" \
             $( [ -f "docs/releases/${{ inputs.version }}.md" ] && echo "--notes-file docs/releases/${{ inputs.version }}.md" || echo "--generate-notes" ) \
             ${{ inputs.publish == 'beta' && '--prerelease' || '--latest' }}
 
+      # Apps with Beta switched on read `latest.json` from the release `beta-channel` (updates.rs),
+      # which always names the newest beta or stable. Made on the first beta.
+      - name: The beta channel points here
+        if: inputs.publish == 'beta'
+        env:
+          GH_TOKEN: ${{ github.repository != 'ProfessorEngineergit/Bezier' && secrets.RELEASES_MIRROR_TOKEN || github.token }}
+        run: |
+          repo=ProfessorEngineergit/Bezier
+          gh release view beta-channel --repo "$repo" >/dev/null 2>&1 ||
+            gh release create beta-channel --repo "$repo" --target "${{ github.sha }}" --prerelease \
+              --title "Beta channel" \
+              --notes "Where the app looks for updates with Beta switched on. The installers are in the releases themselves."
+          gh release upload beta-channel release/latest.json --repo "$repo" --clobber
+
       # A release made with the workflow's own token does not start the website's `release` trigger
       # (GitHub does not chain workflows that way), but starting a workflow by hand is allowed. So the
       # website rebuilds as soon as the files are here, before the slower mirror below.
       - name: Rebuild the website
-        if: inputs.publish == 'stable'
+        if: github.repository == 'ProfessorEngineergit/Bezier-app'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run website.yml --repo "${{ github.repository }}" --ref main
@@ -285,11 +305,15 @@ jobs:
             --title "Bezier ${{ inputs.version }}" \
             --notes "Stable release. Same files as in [bezier-app](https://github.com/${{ github.repository }}/releases/tag/v${{ inputs.version }})." \
             --latest
+          # A stable release is newer than the betas before it, so Beta switched on finds it too.
+          if gh release view beta-channel --repo ProfessorEngineergit/bezier >/dev/null 2>&1; then
+            gh release upload beta-channel release/latest.json --repo ProfessorEngineergit/bezier --clobber
+          fi
 
       # Notify the website (in the app repository) of the new beta. Without the token
       # it picks the beta up on its next scheduled run.
       - name: Tell the website
-        if: inputs.publish == 'beta'
+        if: inputs.publish == 'beta' && github.repository == 'ProfessorEngineergit/Bezier'
         env:
           GH_TOKEN: ${{ secrets.WEBSITE_DISPATCH_TOKEN }}
         run: |
@@ -319,5 +343,7 @@ jobs:
       - name: Send the installers to VirusTotal
         env:
           VT_API_KEY: ${{ secrets.VT_API_KEY }}
-          GH_TOKEN: ${{ github.token }}
+          # A beta built in the app repository was published in bezier; gh writes where GH_REPO says.
+          GH_REPO: ${{ inputs.publish == 'beta' && 'ProfessorEngineergit/Bezier' || github.repository }}
+          GH_TOKEN: ${{ inputs.publish == 'beta' && github.repository != 'ProfessorEngineergit/Bezier' && secrets.RELEASES_MIRROR_TOKEN || github.token }}
         run: node scripts/virustotal.mjs windows --release "v${{ inputs.version }}"

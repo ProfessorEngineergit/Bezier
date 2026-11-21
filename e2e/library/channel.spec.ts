@@ -1,13 +1,12 @@
 /**
- * Release channels: the app starts on stable with alpha and beta features hidden; the switch in
- * Settings, Updates applies a channel immediately and shows its name under the logo; alpha requires
- * an invitation code, verified on the device.
+ * Release channels: the app starts on stable with beta features hidden; the switch in Settings,
+ * Updates applies a channel immediately and shows its name under the logo. What reaches a server is
+ * in development builds only, marked Dev.
  */
 
 import type { Page } from '@playwright/test';
-import { onAlpha, withTestKey } from '../app.js';
+import { onAlpha } from '../app.js';
 import { expect, test } from '../fixtures.js';
-import { testInviteCode } from '../invite-test-key.js';
 
 const library = (page: Page) => page.getByRole('navigation', { name: 'Library' });
 const sections = (page: Page) => page.getByRole('navigation', { name: 'Preference sections' });
@@ -63,45 +62,27 @@ test('beta is a channel of its own, with Beta under the logo, and holds back not
   await expect(page.locator('.library-sidebar__titles .beta-tag')).toHaveCount(0);
 });
 
-test('alpha asks for a code, turns a wrong one away, and opens at once with a good one', async ({
-  page,
-}) => {
-  await withTestKey(page);
+test('the switch offers stable and beta, and no code to ask for', async ({ page }) => {
   await updates(page);
-
-  // Choosing alpha without an invitation asks for one and switches nothing.
-  await page.getByRole('radio', { name: 'Alpha' }).check();
-  const field = page.getByRole('textbox', { name: 'Invitation code' });
-  await expect(field).toBeVisible();
-  await expect(page.locator('.library-sidebar__titles .beta-tag')).toHaveCount(0);
-
-  await field.fill('BZ-not-a-code');
-  await page.getByRole('button', { name: 'Unlock' }).click();
-  await expect(page.getByText('That is not an invitation code')).toBeVisible();
-  await expect(page.locator('.library-sidebar__titles .beta-tag')).toHaveCount(0);
-
-  await field.fill(testInviteCode());
-  await page.getByRole('button', { name: 'Unlock' }).click();
-  await expect(page.locator('.library-sidebar__titles .beta-tag')).toHaveText('Alpha');
-  await expect(library(page).getByRole('button', { name: /^Community/ })).toBeVisible();
-  await expect(sections(page).getByRole('button', { name: /^Collaboration/ })).toBeVisible();
-  await expect(sections(page).getByRole('button', { name: /^Community/ })).toBeVisible();
-  await expect(page.getByText('Good for alpha, with no end date.')).toBeVisible();
-
-  // It persists and is verified again on the next start.
-  await page.reload();
-  await expect(page.locator('.library-sidebar__titles .beta-tag')).toHaveText('Alpha');
+  await expect(page.getByRole('radio', { name: 'Stable' })).toBeChecked();
+  await expect(page.getByRole('radio', { name: 'Beta' })).toBeVisible();
+  await expect(page.getByRole('radio', { name: /^(Dev|Alpha)$/ })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Invitation code' })).toHaveCount(0);
+  await expect(page.getByText('What is in Dev')).toHaveCount(0);
 });
 
-test('removing the invitation leaves alpha for beta, and alpha asks again', async ({ page }) => {
+test('a development build shows Dev, with the parts that reach a server', async ({ page }) => {
+  // The dev server with the tests' own invitation stands for a development build.
   await onAlpha(page);
   await updates(page);
-  await expect(page.locator('.library-sidebar__titles .beta-tag')).toHaveText('Alpha');
-  await page.getByRole('button', { name: 'Remove invitation' }).click();
-  await expect(page.locator('.library-sidebar__titles .beta-tag')).toHaveText('Beta');
+  await expect(page.locator('.library-sidebar__titles .beta-tag')).toHaveText('Dev');
+  await expect(page.getByRole('radio', { name: 'Dev' })).toBeChecked();
+  await expect(page.getByText('What is in Dev')).toBeVisible();
+  await expect(library(page).getByRole('button', { name: /^Community/ })).toBeVisible();
+  await expect(sections(page).getByRole('button', { name: /^Collaboration/ })).toBeVisible();
+  // Beta leaves them out again, at once.
+  await page.getByRole('radio', { name: 'Beta' }).check();
   await expect(library(page).getByRole('button', { name: /^Community/ })).toHaveCount(0);
-  await page.getByRole('radio', { name: 'Alpha' }).check();
-  await expect(page.getByRole('textbox', { name: 'Invitation code' })).toBeVisible();
 });
 
 test('alpha cannot be had by writing it into storage: without a good code it is beta', async ({

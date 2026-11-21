@@ -85,7 +85,7 @@ export const CATEGORIES: readonly {
     id: 'updates',
     label: 'Updates',
     group: 'System',
-    keywords: 'stable beta alpha channel invitation code branch git release',
+    keywords: 'stable beta channel branch git release version',
   },
   {
     id: 'mcp',

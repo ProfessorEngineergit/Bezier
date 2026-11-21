@@ -1,5 +1,7 @@
 /**
- * Whether this device holds a valid invitation to the alpha channel.
+ * Whether the alpha features (everything that reaches a server) are open. They live in development
+ * builds only: a build made with `VITE_CHANNEL=alpha`, or the dev server with a valid invitation
+ * stored (the end-to-end tests). A published build never opens them, whatever is stored.
  *
  * The code is stored as given and re-verified at every start (`verifyInvite`), so access depends on
  * the signature, not on a storage flag. Until the async check completes, alpha reads as closed and
@@ -41,8 +43,11 @@ export function currentInvite(): Invite | null {
   return invite;
 }
 
+/** Vite's own flag: true on the dev server, false in every built app. */
+const DEV_BUILD = (import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV === true;
+
 export function alphaOpen(): boolean {
-  return BUILD_CHANNEL === 'alpha' || currentInvite() !== null;
+  return BUILD_CHANNEL === 'alpha' || (DEV_BUILD && currentInvite() !== null);
 }
 
 /** Reads and verifies the stored code on first access. */

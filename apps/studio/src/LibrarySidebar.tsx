@@ -146,7 +146,7 @@ export function LibrarySidebar({
           />
           <span className="library-sidebar__titles">
             <span className="library-sidebar__wordmark">Bezier</span>
-            {/* Under the mark: the build's channel (beta or alpha). */}
+            {/* Under the mark: the channel (beta, or Dev in a development build). */}
             {channel !== 'stable' && <ChannelTag gate={channel} />}
           </span>
         </div>
